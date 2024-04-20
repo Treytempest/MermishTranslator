@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34728.123
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MermishTranslator", "MermishTranslator\MermishTranslator.csproj", "{51022E49-26A1-4181-843E-2B3083CF8360}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MermishTranslator", "MermishTranslator\MermishTranslator.csproj", "{51022E49-26A1-4181-843E-2B3083CF8360}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MermishDataHandler", "MermishDataHandler\MermishDataHandler.csproj", "{76FE8CCE-02A6-4978-B7A7-03BF2B83A4CB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MermishLib", "MermishLib\MermishLib.csproj", "{76FE8CCE-02A6-4978-B7A7-03BF2B83A4CB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MermishConsoleTestApp", "MermishConsoleTestApp\MermishConsoleTestApp.csproj", "{34D66427-61F1-42B5-90B9-1FAAA50B2539}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{76FE8CCE-02A6-4978-B7A7-03BF2B83A4CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{76FE8CCE-02A6-4978-B7A7-03BF2B83A4CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{76FE8CCE-02A6-4978-B7A7-03BF2B83A4CB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34D66427-61F1-42B5-90B9-1FAAA50B2539}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34D66427-61F1-42B5-90B9-1FAAA50B2539}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34D66427-61F1-42B5-90B9-1FAAA50B2539}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34D66427-61F1-42B5-90B9-1FAAA50B2539}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
