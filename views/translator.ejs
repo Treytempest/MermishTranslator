@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home page</title>
+</head>
+<body>
+    <h1 class="display-4" style="text-align: center;">Mermish Translator</h1>
+    <div class="text-center">
+        <form method="post" id="translateForm">
+            <div style="text-align:center;">
+                <textarea id="englishText" name="englishText" style="width: 50%; height: 200px; font-size: 20px;"><%= englishText %></textarea><br>
+                <textarea id="mermishText" name="mermishText" style="width: 50%; height: 200px; font-size: 20px;" readonly><%= mermishText %></textarea><br>
+                <input type="submit" value="Translate">
+            </div>
+        </form>
+    </div>
+    <script>
+        var englishText = document.getElementById('englishText');
+        englishText.addEventListener('keydown', function (e) {
+            if (e.key == 'Enter') {
+                if (e.ctrlKey) {
+                    // Insert a new line at the cursor position
+                    var start = this.selectionStart;
+                    var end = this.selectionEnd;
+                    this.value = this.value.substring(0, start) + "\n" + this.value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + 1;
+                    e.preventDefault();
+                } else {
+                    e.preventDefault();
+                    document.getElementById('translateForm').submit();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
