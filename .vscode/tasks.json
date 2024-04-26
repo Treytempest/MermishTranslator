@@ -12,6 +12,36 @@
 				"isDefault": true
 			},
 			"label": "tsc: build - tsconfig.json"
-		}
+		},
+		{
+            "label": "Run test.ts",
+            "type": "shell",
+            "command": "tsc --target ES6; if ($?) { node out/test.js }",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always"
+            },
+            "problemMatcher": []
+        },
+		{
+            "label": "Copy to network location",
+            "type": "shell",
+            "command": "xcopy",
+            "args": [
+                "${workspaceFolder}",
+                "\\\\tempest-box\\MermishTranslator\\",
+                "/E",
+                "/I",
+                "/H",
+				"/EXCLUDE:${workspaceFolder}\\.vscode\\exclude.txt"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always"
+            }
+        }
 	]
 }
