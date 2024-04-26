@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        textarea {
+            resize: none;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="display-4" style="text-align: center;">Mermish Translator</h1>
+    <div class="text-center">
+        <form method="post" id="translateForm">
+            <div style="text-align:center;">
+                <label for="englishText">English</label><br>
+                <textarea id="englishText" name="englishText" style="width: 50%; height: 200px; font-size: 20px;"><%= englishText %></textarea><br>
+                <label for="angloText">Anglo-Mermish</label><br>
+                <textarea id="angloText" name="angloText" style="width: 50%; height: 200px; font-size: 20px;"><%= angloText %></textarea><br>
+                <label for="mermishText">Mermish</label><br>
+                <textarea id="mermishText" name="mermishText" style="width: 50%; height: 200px; font-size: 20px;"><%= mermishText %></textarea><br>
+                <input type="hidden" id="lastUpdated" name="lastUpdated">
+            </div>
+        </form>
+    </div>
+    <script>
+    var englishText = document.getElementById('englishText');
+    englishText.addEventListener('change', function (e) {
+        this.dataset.dirty = 'true';
+        document.getElementById('lastUpdated').value = 'englishText';
+    });
+    englishText.addEventListener('blur', function (e) {
+        if (this.dataset.dirty) {
+            document.getElementById('translateForm').submit();
+        }
+    });
+
+    var angloText = document.getElementById('angloText');
+    angloText.addEventListener('change', function (e) {
+        this.dataset.dirty = 'true';
+        document.getElementById('lastUpdated').value = 'angloText';
+    });
+    angloText.addEventListener('blur', function (e) {
+        if (this.dataset.dirty) {
+            document.getElementById('translateForm').submit();
+        }
+    });
+
+    var mermishText = document.getElementById('mermishText');
+    mermishText.addEventListener('change', function (e) {
+        this.dataset.dirty = 'true';
+        document.getElementById('lastUpdated').value = 'mermishText';
+    });
+    mermishText.addEventListener('blur', function (e) {
+        if (this.dataset.dirty) {
+            document.getElementById('translateForm').submit();
+        }
+    });
+    
+    var textareas = document.getElementsByTagName('textarea');
+    // Add keydown event listener to each textarea
+    for (var i = 0; i < textareas.length; i++) {
+        textareas[i].addEventListener('keydown', function(e) {
+            // Check if Enter was pressed without Ctrl
+            if (e.key === 'Enter' && !e.ctrlKey) {
+                // Prevent default behavior (don't insert newline)
+                e.preventDefault();
+                // Set this.dataset.dirty to true
+                this.dataset.dirty = 'true';
+                // Deselect textarea
+                this.blur();
+            }
+            // If Enter was pressed with Ctrl, insert newline manually
+            else if (e.key === 'Enter' && e.ctrlKey) {
+                e.preventDefault();
+                this.value += '\n';
+            }
+        });
+    }
+    </script>
+</body>
+</html>
