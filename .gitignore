@@ -11,6 +11,9 @@
 *.sln.docstates
 credentials.json
 token.json
+.vscode/
+duplicates.txt
+test\ files/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

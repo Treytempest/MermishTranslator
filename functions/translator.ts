@@ -1,31 +1,58 @@
 import { getSheetData } from './sheetsHandler';
 
+type WordData = { translation: string, partOfSpeech: string, definition: string };
+type Dictionary = { [word: string]: WordData[] };
+
 export class Translator {
-  private englishDict: { [key: string]: string };
-  private mermishDict: { [key: string]: string };
-  private englishLDict: { [key: string]: string };
-  private mermishLDict: { [key: string]: string };
+  private englishDict: Dictionary;
+  private mermishDict: Dictionary;
+  private englishLetterDict: { [letter: string]: string };
+  private mermishLetterDict: { [letter: string]: string };
 
   constructor() {
     this.englishDict = {};
     this.mermishDict = {};
-    this.englishLDict = {};
-    this.mermishLDict = {};
+    this.englishLetterDict = {};
+    this.mermishLetterDict = {};
     this.initializeDictionaries();
   }
 
   private initializeDictionaries() {
     getSheetData().then((rows) => {
       rows.slice(1).forEach((row) => {
-      if (row[3] && row[5] && !this.englishDict[row[3].toLowerCase()]) {
-        this.englishDict[row[3].toLowerCase()] = row[5].toLowerCase();
-      }
-      if (row[0] && row[3] && !this.mermishDict[row[0].toLowerCase()]) {
-        this.mermishDict[row[0].toLowerCase()] = row[3].toLowerCase();
-      }
+        if (row[3] && row[3][0] === '-') { // Row is a prefix
+          // TODO: handle this
+        } else if (row[3] && row[3][1] === '-') { // Row is a form 
+          // TODO: handle this
+        } else { // Row is a word
+          var englishWord = row[3].toLowerCase();
+          var mermishWord = row[0].toLowerCase();
+          if (row[3]) { // The english word exists in the spreadsheet
+            if (!this.englishDict[englishWord]) {
+              // The word is not already in the dictionary, initialize it as an empty array
+              this.englishDict[englishWord] = [];
+            }
+            this.englishDict[englishWord].push({
+              translation: row[5],
+              partOfSpeech: row[2],
+              definition: row[4]
+            });
+          }
+          if (row[0]) { // The mermish word exists in the spreadsheet
+            if (!this.mermishDict[mermishWord]) {
+              // The word is not already in the dictionary, initialize it as an empty array
+              this.mermishDict[mermishWord] = [];
+            }
+            this.mermishDict[mermishWord].push({
+              translation: row[3],
+              partOfSpeech: row[2],
+              definition: row[4]
+            });
+          }
+        }
       });
     });
-    this.englishLDict = {
+    this.englishLetterDict = {
       'a': 'ꯘ',
       'b': '꯹',
       'c': 'ꢟ',
@@ -60,7 +87,7 @@ export class Translator {
       '’': 'ᐝ',
       "'": 'ᐝ',
     };
-    this.mermishLDict = {
+    this.mermishLetterDict = {
       'ꯘ': 'a',
       '꯹': 'b',
       'ꢟ': 'c',
@@ -102,30 +129,45 @@ export class Translator {
   }
 
   private replaceWords(input: string, forward: boolean = true): string {
-    // Split the input text into words
-    let words = input.split(' ');
+    // Split the input text into words and non-alphanumeric characters
+    let words = input.split(/(\W+)/);
     let dict = forward ? this.englishDict : this.mermishDict;
     // For each word...
     for (let i = 0; i < words.length; i++) {
       let word = words[i];
-      // Check if the word is in dict (ignoring case)
-      let translatedWord = dict[word.toLowerCase()];
-      if (translatedWord) {
-      // If the word is in dict, replace it with the translated word,
-      // preserving the original case
-      if (word[0] === word[0].toUpperCase()) {
-        translatedWord = translatedWord[0].toUpperCase() + translatedWord.slice(1);
-      }
-      // Translating forward, replace 'x' with appropriate letter
-      if (forward) {
-        // Replace 'x' with 'h' or 'g' in the translated word
-        translatedWord = translatedWord.replace(/([^n])x/gi, '$1h').replace(/nx/gi, 'ng');
-      }
-      words[i] = translatedWord;
+      if (word.match(/\w+/)) { // If the word is alphanumeric
+        // Get the base word
+
+        // Get any prefixes
+
+        // Check if the word is in dict (ignoring case) and retrieve all translations
+        let translation = dict[word.toLowerCase()];
+        let translatedWord = null;
+        if (translation.length > 1) { // Multiple translations for this word
+          //TODO: Handle this, for now just get the first translation
+          for (let i = 0; i < translation.length; i++) {
+            
+          }
+          translatedWord = translation[0].translation; 
+        } else { // Only one translation, set word to that
+          translatedWord = translation[0].translation; 
+        }
+        if (translatedWord) { // If a trnaslation was found
+          // Preserve the original case
+          if (word[0] === word[0].toUpperCase()) {
+            translatedWord = translatedWord[0].toUpperCase() + translatedWord.slice(1);
+          }
+          // Translating forward, replace 'x' with appropriate letter
+          if (forward) {
+            // Replace 'x' with 'h' or 'g' in the translated word
+            translatedWord = translatedWord.replace(/([^n])x/gi, '$1h').replace(/nx/gi, 'ng');
+          }
+          words[i] = translatedWord;
+        }
       }
     }
     // Join the words back together into a single string
-    return words.join(' ');
+    return words.join('');
   }
 
   public translateSymbols(input: string, forward: boolean = true): string {
@@ -171,11 +213,17 @@ export class Translator {
       let word = words[i];
       // Replace 'h' 'g' 'x' and '𑜽' with a wildcard character
       let pattern = word.replace(/(?<=n)g|[hx𑜽]/gi, '.');
-      if (!/^[.]+$/.test(pattern)) {
+      if (!/^[.]+$/.test(pattern)) { // If the pattern is not just wildcards
+        // Create a regex pattern that matches the word
         let regex = new RegExp(`^${pattern}$`, 'gi');
-        let matchingWords = forward ? Object.values(this.englishDict).filter((value) => value.match(regex)) : Object.keys(this.mermishDict).filter((value) => value.match(regex));
-        if (matchingWords.length > 0) {
-          // Replace the word with its matched version
+        // Get all words that match the pattern
+        let matchingWords = forward 
+        ? Object.keys(this.englishDict).filter((word) => 
+            this.englishDict[word].some(wordData => wordData.translation.match(regex))
+          )
+        : Object.keys(this.mermishDict).filter((value) => value.match(regex));
+        if (matchingWords.length > 0) { // A matching word was found
+          // Replace the word with its first matched version
           words[i] = matchingWords[0].toString();
         }
       }
@@ -185,8 +233,8 @@ export class Translator {
 
   private replaceLetters(input: string, forward: boolean = true): string {
     let dict = {};
-    if (!forward) { dict = this.mermishLDict; }
-    else { dict = this.englishLDict; }
+    if (!forward) { dict = this.mermishLetterDict; }
+    else { dict = this.englishLetterDict; }
   
     let sb: string[] = [];
     let inputArray = Array.from(input); // Use Array.from to correctly handle surrogate pairs
