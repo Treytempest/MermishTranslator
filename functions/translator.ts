@@ -3,12 +3,18 @@ import { getSheetData } from './sheetsHandler';
 type WordData = { translation: string, partOfSpeech: string, definition: string };
 type Dictionary = { [word: string]: WordData[] };
 
+/**
+ * Represents a Translator class that translates words and symbols between English and Mermish.
+ */
 export class Translator {
   private englishDict: Dictionary;
   private mermishDict: Dictionary;
   private englishLetterDict: { [letter: string]: string };
   private mermishLetterDict: { [letter: string]: string };
 
+  /**
+   * Initializes a new instance of the Translator class.
+   */
   constructor() {
     this.englishDict = {};
     this.mermishDict = {};
@@ -17,6 +23,9 @@ export class Translator {
     this.initializeDictionaries();
   }
 
+  /**
+   * Initializes the dictionaries by fetching data from a spreadsheet.
+   */
   private initializeDictionaries() {
     getSheetData().then((rows) => {
       rows.slice(1).forEach((row) => {
@@ -122,12 +131,24 @@ export class Translator {
     };
   }
 
+  /**
+   * Translates words in the input string from English to Mermish or vice versa.
+   * @param input - The input string to be translated.
+   * @param forward - A boolean indicating whether the translation is from English to Mermish (true) or from Mermish to English (false). Default is true.
+   * @returns The translated string.
+   */
   public translateWords(input: string, forward: boolean = true): string {
-    let output: string = this.regExp(input, true);
+    let output: string = this.regexSanatise(input, true);
     output = this.replaceWords(output, forward);
-    return this.regExp(output, false);
+    return this.regexSanatise(output, false);
   }
 
+  /**
+   * Replaces words in the input string with their translations.
+   * @param input - The input string to be processed.
+   * @param forward - A boolean indicating whether the translation is from English to Mermish (true) or from Mermish to English (false). Default is true.
+   * @returns The processed string with words replaced by their translations.
+   */
   private replaceWords(input: string, forward: boolean = true): string {
     // Split the input text into words and non-alphanumeric characters
     let words = input.split(/(\W+)/);
@@ -152,7 +173,7 @@ export class Translator {
         } else { // Only one translation, set word to that
           translatedWord = translation[0].translation; 
         }
-        if (translatedWord) { // If a trnaslation was found
+        if (translatedWord) { // If a translation was found
           // Preserve the original case
           if (word[0] === word[0].toUpperCase()) {
             translatedWord = translatedWord[0].toUpperCase() + translatedWord.slice(1);
@@ -170,8 +191,14 @@ export class Translator {
     return words.join('');
   }
 
+  /**
+   * Translates symbols in the input string from English to Mermish or vice versa.
+   * @param input - The input string to be translated.
+   * @param forward - A boolean indicating whether the translation is from English to Mermish (true) or from Mermish to English (false). Default is true.
+   * @returns The translated string.
+   */
   public translateSymbols(input: string, forward: boolean = true): string {
-    let output: string = this.regExp(input, true);
+    let output: string = this.regexSanatise(input, true);
     if (forward) {
       output = this.handleX(output, forward);
       output = this.handleDoubles(output, forward);
@@ -181,9 +208,15 @@ export class Translator {
       output = this.handleDoubles(output, forward);
       output = this.handleX(output, forward);
     }
-    return this.regExp(output, false);
+    return this.regexSanatise(output, false);
   }
 
+  /**
+   * Handles consecutive double letters in the input string.
+   * @param input - The input string to be processed.
+   * @param forward - A boolean indicating whether the translation is from English to Mermish (true) or from Mermish to English (false). Default is true.
+   * @returns The processed string with consecutive double letters handled.
+   */
   private handleDoubles(input: string, forward: boolean = true): string {
     if (forward) {
       const replacementChar: string = 'ᶥ';
@@ -205,6 +238,12 @@ export class Translator {
     return input;
   }
 
+  /**
+   * Handles the letter 'x' in the input string.
+   * @param input - The input string to be processed.
+   * @param forward - A boolean indicating whether the translation is from English to Mermish (true) or from Mermish to English (false). Default is true.
+   * @returns The processed string with the letter 'x' handled.
+   */
   private handleX(input: string, forward: boolean = true): string {
     // Split the input text into words
     let words = input.split(' ');
@@ -231,6 +270,12 @@ export class Translator {
     return words.join(' ');
   }
 
+  /**
+   * Replaces letters in the input string with their translations.
+   * @param input - The input string to be processed.
+   * @param forward - A boolean indicating whether the translation is from English to Mermish (true) or from Mermish to English (false). Default is true.
+   * @returns The processed string with letters replaced by their translations.
+   */
   private replaceLetters(input: string, forward: boolean = true): string {
     let dict = {};
     if (!forward) { dict = this.mermishLetterDict; }
@@ -253,7 +298,13 @@ export class Translator {
     return sb.join('');
   }
 
-  private regExp(text: string, escape: boolean = true): string {
+  /**
+   * Escapes or unescapes special characters in the input string using regular expressions.
+   * @param text - The input string to be processed.
+   * @param escape - A boolean indicating whether to escape (true) or unescape (false) special characters. Default is true.
+   * @returns The processed string with special characters escaped or unescaped.
+   */
+  private regexSanatise(text: string, escape: boolean = true): string {
     if (escape) {
       return text.replace(/[-[\]{}()*+?꡴.˝,\\^$|#]/g, '\\$&');
     } else{
