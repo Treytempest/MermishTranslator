@@ -77,7 +77,7 @@
                 logBox.appendChild(span);
                 logBox.appendChild(document.createTextNode(message + '\n'));
                 // Scroll to the bottom of the log box
-                logs.scrollTop = logs.scrollHeight;
+                logBox.scrollTop = logBox.scrollHeight;
             }
             // Color each line in the initial text
             var initialText = document.querySelector('#logs').textContent.trim().split('\n');

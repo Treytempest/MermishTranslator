@@ -70,6 +70,8 @@ process.on('exit', function(code) {
 // Define your dictionary here
 const translator = new Translator();
 
+app.set('trust proxy', true);
+
 // Set the view engine to ejs
 app.set('view engine', 'ejs');
 
