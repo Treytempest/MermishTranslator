@@ -16,17 +16,17 @@ export class Translator {
    * Initializes a new instance of the Translator class.
    */
   constructor() {
-    this.englishDict = {};
-    this.mermishDict = {};
-    this.englishLetterDict = {};
-    this.mermishLetterDict = {};
     this.initializeDictionaries();
   }
 
   /**
    * Initializes the dictionaries by fetching data from a spreadsheet.
    */
-  private initializeDictionaries() {
+  public async initializeDictionaries() {
+    this.englishDict = {};
+    this.mermishDict = {};
+    this.englishLetterDict = {};
+    this.mermishLetterDict = {};
     console.log('Building dictionaries...');
     getSheetData().then((rows) => {
       rows.slice(1).forEach((row) => {

@@ -12,6 +12,7 @@ async function getLatestCommitHash(): Promise<string> {
     return data.sha;
 }
 
+// #region Update functions
 // Function to get the current commit hash
 function getCurrentCommitHash(): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -27,6 +28,7 @@ function getCurrentCommitHash(): Promise<string> {
 
 // Function to pull updates
 function pullUpdates(): Promise<string> {
+    console.log("Pulling updates...");
     return new Promise((resolve, reject) => {
         exec('git pull', (error, stdout) => {
             if (error) {
@@ -41,6 +43,7 @@ function pullUpdates(): Promise<string> {
 
 // Function to install dependencies
 function installDependencies(): Promise<string> {
+    console.log("Installing dependencies...");
     return new Promise((resolve, reject) => {
         exec('npm install', (error, stdout) => {
             if (error) {
@@ -55,6 +58,7 @@ function installDependencies(): Promise<string> {
 
 // Function to transpile TypeScript
 function transpileTypeScript(): Promise<string> {
+    console.log("Transpiling TypeScript...");
     return new Promise((resolve, reject) => {
         exec('tsc', (error, stdout) => {
             if (error) {
@@ -62,19 +66,6 @@ function transpileTypeScript(): Promise<string> {
             } else {
                 console.log("Done.");
                 resolve(stdout.trim());
-            }
-        });
-    });
-}
-
-// Function to restart the app
-function restartApp(): Promise<void> {
-    return new Promise((resolve, reject) => {
-        exec('pm2 restart app', (error) => {
-            if (error) {
-                reject(error);
-            } else {
-                resolve();
             }
         });
     });
@@ -94,20 +85,71 @@ export async function checkForUpdates(): Promise<boolean> {
 // Function to apply updates and restart the app
 export async function applyUpdates(): Promise<void> {
     try {
-        console.log("Pulling updates...");
         await pullUpdates();
-        console.log("Installing dependencies...");
         await installDependencies();
-        console.log("Transpiling TypeScript...");
         await transpileTypeScript();
-        console.log("Restarting app...");
         await restartApp();
     } catch (error) {
         console.error("Error applying updates: ", error);
     }
 }
+// #endregion
 
-function makeAdminPassword() {
+// #region App state management functions
+// Function to restart the app
+export function restartApp(): Promise<void> {
+    return new Promise((resolve, reject) => {
+        console.log("Restarting app...");
+        exec('pm2 restart app', (error) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve();
+            }
+        });
+    });
+}
+
+// Function to shut down the app
+export function shutDownApp(): void {
+    console.log("Shutting down app...");
+    exec('pm2 stop app', (error) => {
+        if (error) {
+            console.error("Error shutting down app: ", error);
+        }
+    });
+}
+// #endregion
+
+// #region Data functions
+export function createLogPath(logsDir: string): string {
+    let date = new Date();
+    let timestamp = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}_${date.getHours().toString().padStart(2, '0')}-${date.getMinutes().toString().padStart(2, '0')}-${date.getSeconds().toString().padStart(2, '0')}`;
+    if (!fs.existsSync(logsDir)) {
+        fs.mkdirSync(logsDir);
+    }
+    return path.join(logsDir, `server-${timestamp}.log`);
+}
+
+export function clearLogs(log_directory: string): void {
+    fs.readdir(log_directory, (err, files) => {
+        if (err) {
+            console.error(err);
+            return;
+        }
+        for (const file of files) {
+            fs.unlink(path.join(log_directory, file), err => {
+                if (err) {
+                    console.error(err);
+                }
+            });
+        }
+    });
+}
+// #endregion
+
+// #region User management functions
+function addAdmin() {
     const username: string = process.argv[2];
     const password: string = process.argv[3];
     bcrypt.hash(password, 10, (err: Error, hash: string) => {
@@ -124,4 +166,6 @@ function makeAdminPassword() {
         let adminFile = path.join(__dirname, '..', 'admins.json');
         fs.writeFileSync(adminFile, JSON.stringify(admins, null, 2));
     });
+    console.log(`Admin ${username} added.`);
 }
+//#endregion

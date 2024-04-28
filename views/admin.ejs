@@ -55,9 +55,19 @@
         <div class="logout-button">
             <button id="logout" class="btn btn-danger">Logout</button>
         </div>
-        <div class="d-flex justify-content-center">
-            <button id="check-updates" class="btn btn-primary mr-2">Check for updates</button>
-            <button id="apply-updates" class="btn btn-secondary" disabled>Apply updates</button>
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-3 d-flex flex-column align-items-end py-2">
+                    <button id="shutdown-server" class="btn btn-primary mb-2">Shutdown</button>
+                    <button id="manage-users" class="btn btn-primary mb-2">Manage Users</button>
+                    <button id="check-updates" class="btn btn-primary mb-2">Check for updates</button>
+                </div>
+                <div class="col-md-3 d-flex flex-column align-items-start py-2">
+                    <button id="restart-server" class="btn btn-primary mb-2">Restart</button>
+                    <button id="clear-logs" class="btn btn-primary mb-2">Clear Logs</button>
+                    <button id="rebuild-dictionaries" class="btn btn-primary mb-2">Rebuild dictionaries</button>
+                </div>
+            </div>
         </div>
         <!-- Render the log box -->
         <div class="mt-5">
@@ -70,9 +80,9 @@
         </div>
         <script src="/socket.io/socket.io.js"></script>
         <script>
-            var socket = io();
-            // Function to color a log message
-            function colorLogMessage(data) {
+            // #region Log box code
+            // Function to color a log message and add it to the log box
+            function addLogMessage(data) {
                 // Split the log message into the log level tag and the rest of the message
                 var tag = data.substring(0, data.indexOf(']') + 1);
                 var message = data.substring(data.indexOf(']') + 1);
@@ -94,38 +104,64 @@
                 // Scroll to the bottom of the log box
                 logBox.parentElement.scrollTop = logBox.parentElement.scrollHeight;
             }
-            // Color each line in the initial text
+            // Initial setup for the log box
+            var socket = io();
+            // Color each line in the initial text and add it to the log box
             var initialText = document.querySelector('#logs').textContent.trim().split('\n');
             document.querySelector('#logs').textContent = '';
             for (var i = 0; i < initialText.length; i++) {
-                colorLogMessage(initialText[i]);
+                addLogMessage(initialText[i]);
             }
-            // Scroll to the bottom of the log box after coloring the initial text
+            // Scroll to the bottom of the log box
             document.querySelector('#logs').parentElement.scrollTop = document.querySelector('#logs').parentElement.scrollHeight;
-            // Listen for a message from the server
-            socket.on('log update', colorLogMessage);
-            document.getElementById('logout').addEventListener('click', function() {
-                fetch('/admin/logout', {
-                    method: 'POST'
-                }).then(() => {
+            // Listen for a message from the server, then append it to the log box
+            socket.on('log update', addLogMessage);
+            // #endregion
+
+            // #region Button click event listeners
+            document.querySelector('#logout').addEventListener('click', function() {
+                fetch('/admin/logout', { method: 'POST' })
+                .then(() => {
                     window.location.href = '/admin';
                 });
             });
             document.querySelector('#check-updates').addEventListener('click', function() {
-            fetch('/admin/check-updates')
+                fetch('/admin/check-updates', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
                     if (data.hasUpdates) {
-                        document.querySelector('#apply-updates').disabled = false;
+                        if (confirm('Updates are available. Do you want to apply them? This will restart the server.')) {
+                            fetch('/admin/apply-updates');
+                        }
+                    } else {
+                        alert('No updates available.');
                     }
                 });
             });
-            document.querySelector('#apply-updates').addEventListener('click', function() {
-                fetch('/admin/apply-updates')
-                    .then(() => {
-                        document.querySelector('#apply-updates').disabled = true;
-                    });
+            document.querySelector('#shutdown-server').addEventListener('click', function() {
+                if (confirm('Are you sure you want to shut down the server?')) {
+                    fetch('/admin/shutdown', { method: 'POST' });
+                }
             });
+            document.querySelector('#restart-server').addEventListener('click', function() {
+                if (confirm('Are you sure you want to restart the server?')) {
+                    fetch('/admin/restart', { method: 'POST' });
+                }
+            });
+            document.querySelector('#manage-users').addEventListener('click', function() {
+                window.location.href = '/admin/users';
+            });
+            document.querySelector('#clear-logs').addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear the logs?')) {
+                    document.querySelector('#logs').textContent = '';
+                    fetch('/admin/clear-logs', { method: 'POST' });
+                }
+            });
+            document.querySelector('#rebuild-dictionaries').addEventListener('click', function() {
+                fetch('/admin/rebuild-dictionaries', { method: 'POST' });
+            });
+            // #endregion
+
         </script>
     <% } %>
 </body>
