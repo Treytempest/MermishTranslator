@@ -13,24 +13,52 @@ function getCurrentCommitHash(): Promise<string> {
     return new Promise((resolve, reject) => {
         exec('git rev-parse HEAD', (error, stdout) => {
             if (error) {
-                console.error("Unable to get current git version: "+error);
                 reject(error);
             } else {
+                console.log(stdout.trim());
                 resolve(stdout.trim());
             }
         });
     });
 }
 
-// Function to download updates
-function downloadUpdates(): Promise<void> {
+// Function to pull updates
+function pullUpdates(): Promise<string> {
     return new Promise((resolve, reject) => {
-        exec('git pull && npm install', (error) => {
+        exec('git pull', (error, stdout) => {
             if (error) {
-                console.error("Unable to get updates: "+error);
                 reject(error);
             } else {
-                resolve();
+                console.log(stdout.trim());
+                resolve(stdout.trim());
+            }
+        });
+    });
+}
+
+// Function to install dependencies
+function installDependencies(): Promise<string> {
+    return new Promise((resolve, reject) => {
+        exec('npm install', (error, stdout) => {
+            if (error) {
+                reject(error);
+            } else {
+                console.log(stdout.trim());
+                resolve(stdout.trim());
+            }
+        });
+    });
+}
+
+// Function to transpile TypeScript
+function transpileTypeScript(): Promise<string> {
+    return new Promise((resolve, reject) => {
+        exec('tsc', (error, stdout) => {
+            if (error) {
+                reject(error);
+            } else {
+                console.log(stdout.trim());
+                resolve(stdout.trim());
             }
         });
     });
@@ -41,7 +69,6 @@ function restartApp(): Promise<void> {
     return new Promise((resolve, reject) => {
         exec('pm2 restart app', (error) => {
             if (error) {
-                console.error("Unable to restart: "+error);
                 reject(error);
             } else {
                 resolve();
@@ -63,8 +90,16 @@ export async function checkForUpdates(): Promise<boolean> {
 
 // Function to apply updates and restart the app
 export async function applyUpdates(): Promise<void> {
-    console.log("Downloading updates...");
-    await downloadUpdates();
-    console.log("Restarting server...");
-    await restartApp();
+    try {
+        console.log("Pulling updates...");
+        await pullUpdates();
+        console.log("Installing dependencies...");
+        await installDependencies();
+        console.log("Transpiling TypeScript...");
+        await transpileTypeScript();
+        console.log("Restarting app...");
+        await restartApp();
+    } catch (error) {
+        console.error("Error applying updates: ", error);
+    }
 }
