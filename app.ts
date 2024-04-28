@@ -10,6 +10,7 @@ import sharedsession from 'express-socket.io-session';
 import createError from 'http-errors';
 import { Translator } from './functions/translator';
 import * as adminFunctions from './functions/adminFunctions';
+import { v4 as uuidv4 } from 'uuid';
 
 // #region Server setup
 // Import required modules
@@ -89,46 +90,49 @@ app.get('/', function (req, res) {
     res.render('translator', { englishText: '', angloText: '', mermishText: '' });
 });
 
-app.post('/', function (req, res) {
+app.post('/', function (req, res, next) {
     const lastUpdated = req.body.lastUpdated;
     let englishText = req.body.englishText;
     let angloText = req.body.angloText;
     let mermishText = req.body.mermishText;
-
-    switch (lastUpdated) {
-        case 'englishText':
-            if (englishText) {
-                angloText = translator.translateWords(englishText, true);
-                mermishText = translator.translateSymbols(angloText, true);
-            } else {
-                angloText = '';
-                mermishText = '';
-            }
-            break;
-        case 'angloText':
-            if (angloText) {
-                englishText = translator.translateWords(angloText, false);
-                mermishText = translator.translateSymbols(angloText, true);
-            } else {
-                englishText = '';
-                mermishText = '';
-            }
-            break;
-        case 'mermishText':
-            if (mermishText) {
-                angloText = translator.translateSymbols(mermishText, false);
-                englishText = translator.translateWords(angloText, false);
-            } else {
-                angloText = '';
-                englishText = '';
-            }
-            break;
-        default:
-            // Handle any other cases here
-            break;
+    try {
+        switch (lastUpdated) {
+            case 'englishText':
+                if (englishText) {
+                    angloText = translator.translateWords(englishText, true);
+                    mermishText = translator.translateSymbols(angloText, true);
+                } else {
+                    angloText = '';
+                    mermishText = '';
+                }
+                break;
+            case 'angloText':
+                if (angloText) {
+                    englishText = translator.translateWords(angloText, false);
+                    mermishText = translator.translateSymbols(angloText, true);
+                } else {
+                    englishText = '';
+                    mermishText = '';
+                }
+                break;
+            case 'mermishText':
+                if (mermishText) {
+                    angloText = translator.translateSymbols(mermishText, false);
+                    englishText = translator.translateWords(angloText, false);
+                } else {
+                    angloText = '';
+                    englishText = '';
+                }
+                break;
+        }
+        res.render('translator', { englishText: englishText, angloText: angloText, mermishText: mermishText });
     }
-
-    res.render('translator', { englishText: englishText, angloText: angloText, mermishText: mermishText });
+    catch (err) {
+        next(createError(500,'Error processing translation.\n' +
+                             `English Text: '${englishText}'\nAnglo Text: '${angloText}'\nMermish Text: '${mermishText}'\n` +
+                             `Translation triggered by: ${lastUpdated}`));
+    }
+    
 });
 // #endregion
 
@@ -229,6 +233,7 @@ app.post('/admin/clear-logs', (req, res, next) => {
         adminFunctions.clearLogs(logsDir);
         log_file = adminFunctions.createLogPath(logsDir);
         log_writer = fs.createWriteStream(log_file, {flags : 'w'});
+        console.log('Logs cleared.');
     } else { next(createError(403,'Forbidden')); }
 });
 
@@ -263,8 +268,9 @@ app.use(function (err, req, res, next) {
             res.status(404).render('error/404');
             break;
         case 500: // Internal server error
-            console.error(`Internal server error: ${err.message}\n${err.stack}`);
-            res.status(500).send(err.message);
+            const errorId = uuidv4(); // Generate a unique error ID
+            console.error(`Internal server error:\nError ID: ${errorId}\n${err.message}\n${err.stack}`);
+            res.status(500).render('error/500', { errorMessage: `Error ID: ${errorId}\n${err.message}` });
             break;
         case 502: // Bad gateway
             console.error(`Bad gateway: ${err.message}\n${err.stack}`);

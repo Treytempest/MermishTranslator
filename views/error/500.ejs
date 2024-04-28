@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Error 500 - Internal Server Error</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 100px;
+        }
+        h1 {
+            font-size: 36px;
+            color: #FF0000;
+        }
+        p {
+            font-size: 18px;
+            color: #333333;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        pre {
+            text-align: left;
+        }
+        .centered-block {
+            display: flex;
+            justify-content: center;
+        }
+        .centered-block pre {
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Error 500 - Internal Server Error</h1>
+    <p>Please report this issue on the <a href="https://github.com/Treytempest/MermishTranslator/issues">GitHub issue tracker</a> and provide the following information:</p>
+    <div class="centered-block">
+        <pre><%= errorMessage %></pre>
+    </div>
+</body>
+</html>

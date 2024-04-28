@@ -160,33 +160,35 @@ export class Translator {
     for (let i = 0; i < words.length; i++) {
       let word = words[i];
       if (word.match(/\w+/)) { // If the word is alphanumeric
-        // Get the base word
+        // TODO: Get the base word
 
-        // Get any prefixes
+        // TODO: Get any prefixes
 
         // Check if the word is in dict (ignoring case) and retrieve all translations
         let translation = dict[word.toLowerCase()];
         let translatedWord = null;
-        if (translation.length > 1) { // Multiple translations for this word
-          //TODO: Handle this, for now just get the first translation
-          for (let i = 0; i < translation.length; i++) {
-            
+        if (translation) { // Word is in the dictionary
+          if (translation.length > 1) { // Multiple translations for this word
+            //TODO: Handle this, for now just get the first translation
+            for (let i = 0; i < translation.length; i++) {
+              
+            }
+            translatedWord = translation[0].translation; 
+          } else { // Only one translation, set word to that
+            translatedWord = translation[0].translation; 
           }
-          translatedWord = translation[0].translation; 
-        } else { // Only one translation, set word to that
-          translatedWord = translation[0].translation; 
-        }
-        if (translatedWord) { // If a translation was found
-          // Preserve the original case
-          if (word[0] === word[0].toUpperCase()) {
-            translatedWord = translatedWord[0].toUpperCase() + translatedWord.slice(1);
+          if (translatedWord) { // If a translation was found
+            // Preserve the original case
+            if (word[0] === word[0].toUpperCase()) {
+              translatedWord = translatedWord[0].toUpperCase() + translatedWord.slice(1);
+            }
+            // Translating forward, replace 'x' with appropriate letter
+            if (forward) {
+              // Replace 'x' with 'h' or 'g' in the translated word
+              translatedWord = translatedWord.replace(/([^n])x/gi, '$1h').replace(/nx/gi, 'ng');
+            }
+            words[i] = translatedWord;
           }
-          // Translating forward, replace 'x' with appropriate letter
-          if (forward) {
-            // Replace 'x' with 'h' or 'g' in the translated word
-            translatedWord = translatedWord.replace(/([^n])x/gi, '$1h').replace(/nx/gi, 'ng');
-          }
-          words[i] = translatedWord;
         }
       }
     }
