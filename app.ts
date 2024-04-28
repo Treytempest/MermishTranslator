@@ -1,7 +1,6 @@
-require('dotenv').config({ path: './secrets.env' });
 import fs from 'fs';
 import util from 'util';
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { Server } from 'socket.io';
 import { createServer } from 'http';
 import path from 'path';
@@ -10,6 +9,10 @@ import session from 'express-session';
 import sharedsession from 'express-socket.io-session';
 import { Translator } from './functions/translator';
 import * as adminFunctions from './functions/adminFunctions';
+
+// #region Server setup
+// Import required modules
+require('dotenv').config({ path: './secrets.env' });
 
 // Create a write stream for the log file
 let date = new Date();
@@ -21,14 +24,16 @@ if (!fs.existsSync(logsDir)) {
 const log_file = path.join(__dirname, '..', 'logs', `server-${timestamp}.log`);
 let log_writer = fs.createWriteStream(log_file, {flags : 'w'});
 
+// Create Express app, HTTP server, and Socket.IO server
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer);
+
+// Create Express session middleware
 const expressSession = session({ secret: process.env.SECRET_KEY, resave: true, saveUninitialized: true });
 
-// Override console.log
+// Override console.log to write logs to file and emit to Socket.IO clients
 let log_stdout = process.stdout;
-
 console.log = function(d) {
   let timestamp = new Date().toLocaleString();
   let message = `[INFO] ${timestamp} - ${util.format(d)}`;
@@ -37,18 +42,17 @@ console.log = function(d) {
   io.emit('log update', message);
 };
 
-// Override console.warn
+// Override console.warn to write logs to file and emit to Socket.IO clients
 console.warn = function(d) {
     let timestamp = new Date().toLocaleString();
     let message = `[WARN] ${timestamp} - ${util.format(d)}`;
     log_writer.write(message + '\n');
     log_stdout.write(message + '\n');
     io.emit('log update', message);
-  };
+};
 
-// Override console.error
+// Override console.error to write logs to file and emit to Socket.IO clients
 let log_stderr = process.stderr;
-
 console.error = function(d) {
   let timestamp = new Date().toLocaleString();
   let message = `[ERROR] ${timestamp} - ${util.format(d)}`;
@@ -60,25 +64,22 @@ console.error = function(d) {
 // Global error handler
 process.on('uncaughtException', function(err) {
     console.error(err);
-  });
+});
 
 // Listen for the exit event
 process.on('exit', function(code) {
     console.log(`Server is shutting down with exit code: ${code}`);
-  });
+});
 
-// Define your dictionary here
+// Define the translation object
 const translator = new Translator();
 
+// Configure Express app
 app.set('trust proxy', true);
+app.set('view engine', 'ejs'); // Set the view engine to ejs
+app.set('views', path.join(__dirname, '..', 'views')); // Set the views directory
 
-// Set the view engine to ejs
-app.set('view engine', 'ejs');
-
-// Set the views directory
-app.set('views', path.join(__dirname, '..', 'views'));
-
-// Use middleware to parse request bodies
+// Middleware to parse request bodies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(expressSession);
@@ -86,8 +87,10 @@ io.use(sharedsession(expressSession, { autoSave: true }));
 app.use(function (err, req, res, next) {
     console.error(err.stack);
     res.status(500).send('Something broke!');
-  });
+});
+// #endregion
 
+// #region Translator Page routes
 app.get('/', function (req, res) {
     // Render the 'translator' view
     res.render('translator', { englishText: '', angloText: '', mermishText: '' });
@@ -134,7 +137,9 @@ app.post('/', function (req, res) {
 
     res.render('translator', { englishText: englishText, angloText: angloText, mermishText: mermishText });
 });
+// #endregion
 
+// #region Admin Portal routes
 app.get('/admin', function (req, res) {
     if (req.session.admin) {
         // If the user is logged in, render the admin features
@@ -185,4 +190,16 @@ app.get('/admin/apply-updates', async (req, res) => {
     res.sendStatus(200);
 });
 
+app.post('/admin/logout', (req: Request, res: Response) => {
+    req.session.destroy((err: Error) => {
+        if(err) {
+            console.log(err);
+            return res.sendStatus(500);
+        }
+        res.redirect('/admin');
+    });
+});
+// #endregion
+
+// Start the server
 httpServer.listen(3000, () => console.log('Server started on port 3000'));

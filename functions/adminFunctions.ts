@@ -1,5 +1,9 @@
 import { exec } from 'child_process';
 import fetch from 'node-fetch';
+import fs from 'fs';
+import bcrypt from 'bcrypt';
+import { getSheetData } from './sheetsHandler';
+import path from 'path';
 
 // Function to get the latest commit hash of the code base
 async function getLatestCommitHash(): Promise<string> {
@@ -101,4 +105,23 @@ export async function applyUpdates(): Promise<void> {
     } catch (error) {
         console.error("Error applying updates: ", error);
     }
+}
+
+function makeAdminPassword() {
+    const username: string = process.argv[2];
+    const password: string = process.argv[3];
+    bcrypt.hash(password, 10, (err: Error, hash: string) => {
+        if (err) {
+            console.error(err);
+            return;
+        }
+        const admins = [
+            {
+                username: username,
+                password: hash
+            }
+        ];
+        let adminFile = path.join(__dirname, '..', 'admins.json');
+        fs.writeFileSync(adminFile, JSON.stringify(admins, null, 2));
+    });
 }
