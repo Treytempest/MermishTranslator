@@ -14,6 +14,10 @@ import * as adminFunctions from './functions/adminFunctions';
 // Create a write stream for the log file
 let date = new Date();
 let timestamp = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}_${date.getHours().toString().padStart(2, '0')}-${date.getMinutes().toString().padStart(2, '0')}-${date.getSeconds().toString().padStart(2, '0')}`;
+const logsDir = path.join(__dirname, '..', 'logs');
+if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir);
+}
 const log_file = path.join(__dirname, '..', 'logs', `server-${timestamp}.log`);
 let log_writer = fs.createWriteStream(log_file, {flags : 'w'});
 

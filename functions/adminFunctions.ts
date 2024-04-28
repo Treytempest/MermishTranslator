@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 
 // Function to get the latest commit hash of the code base
 async function getLatestCommitHash(): Promise<string> {
-    const response = await fetch('https://api.github.com/Treytempest/MermishTranslator/commits/master');
+    const response = await fetch('https://api.github.com/repos/Treytempest/MermishTranslator/commits/master');
     const data = await response.json();
     return data.sha;
 }
@@ -15,7 +15,6 @@ function getCurrentCommitHash(): Promise<string> {
             if (error) {
                 reject(error);
             } else {
-                console.log(stdout.trim());
                 resolve(stdout.trim());
             }
         });
@@ -57,7 +56,7 @@ function transpileTypeScript(): Promise<string> {
             if (error) {
                 reject(error);
             } else {
-                console.log(stdout.trim());
+                console.log("Done.");
                 resolve(stdout.trim());
             }
         });
