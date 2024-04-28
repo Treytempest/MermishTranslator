@@ -27,6 +27,7 @@ export class Translator {
    * Initializes the dictionaries by fetching data from a spreadsheet.
    */
   private initializeDictionaries() {
+    console.log('Building dictionaries...');
     getSheetData().then((rows) => {
       rows.slice(1).forEach((row) => {
         if (row[3] && row[3][0] === '-') { // Row is a prefix
@@ -129,6 +130,7 @@ export class Translator {
       '𑑛': '&',
       'ᐝ': "'",
     };
+    console.log('Dictionary build complete!');
   }
 
   /**

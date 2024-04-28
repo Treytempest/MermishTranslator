@@ -13,6 +13,8 @@ credentials.json
 token.json
 .vscode/
 duplicates.txt
+secrets.env
+admins.json
 test\ files/
 
 # User-specific files (MonoDevelop/Xamarin Studio)

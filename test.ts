@@ -1,9 +1,37 @@
 import { getSheetData } from './functions/sheetsHandler';
-import * as fs from 'fs';
+import fs from 'fs';
+import bcrypt from 'bcrypt';
 
-getDuplicates();
+
+makeAdminPassword();
+//getDuplicates();
 
 // Random functions go here for various purposes - testing stuff, pulling information, etc.
+
+/**
+ * Generates an admin password and stores it in a JSON file.
+ */
+function makeAdminPassword() {
+
+    const username: string = process.argv[2];
+    const password: string = process.argv[3];
+
+    bcrypt.hash(password, 10, (err: Error, hash: string) => {
+        if (err) {
+            console.error(err);
+            return;
+        }
+
+        const admins = [
+            {
+                username: username,
+                password: hash
+            }
+        ];
+
+        fs.writeFileSync('admins.json', JSON.stringify(admins, null, 2));
+    });
+}
 
 /**
  * Retrieves duplicate values from the sheet data and writes them to a file.

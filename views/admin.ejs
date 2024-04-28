@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+</head>
+<body>
+    <% if (showLoginForm) { %>
+        <!-- Render the login form -->
+        <div class="d-flex justify-content-center align-items-center" style="height: 100vh;">
+            <div>
+                <% if (error) { %>
+                    <p class="text-danger"><%= error %></p>
+                <% } %>
+                <form method="post" action="/admin">
+                    <div class="form-group row">
+                        <label for="username" class="col-sm-3 col-form-label">Username:</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="username" name="username" placeholder="Enter your username" required>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label for="password" class="col-sm-3 col-form-label">Password:</label>
+                        <div class="col-sm-9">
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-sm-9 offset-sm-3">
+                            <button type="submit" class="btn btn-primary">Log in</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    <% } else { %>
+        <!-- Render the admin page -->
+        <div class="d-flex justify-content-center" style="height: 50vh;">
+            <div class="text-center">
+                <h1>Admin</h1>
+                <p>Welcome, <%= user.username %></p>
+            </div>
+        </div>
+        <div class="d-flex justify-content-center">
+            <button id="check-updates" class="btn btn-primary mr-2">Check for updates</button>
+            <button id="apply-updates" class="btn btn-secondary" disabled>Apply updates</button>
+        </div>
+        <!-- Render the log box -->
+        <div class="mt-5">
+            <div class="d-flex justify-content-center">
+                <h2>Server Logs</h2>
+            </div>
+            <div style="background-color: #f8f9fa; border: 1px solid #ced4da; padding: 15px; overflow: auto; max-height: 200px;">
+                <pre id="logs"><%= logs %></pre>
+            </div>
+        </div>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            var socket = io();
+            // Function to color a log message
+            function colorLogMessage(data) {
+                // Split the log message into the log level tag and the rest of the message
+                var tag = data.substring(0, data.indexOf(']') + 1);
+                var message = data.substring(data.indexOf(']') + 1);
+                // Create a new span element for the log level tag
+                var span = document.createElement('span');
+                span.textContent = tag;
+                // Set the color of the span element based on the log level
+                if (tag.includes('[INFO]')) {
+                    span.style.color = '#259C25';
+                } else if (tag.includes('[WARN]')) {
+                    span.style.color = '#FFA500';
+                } else if (tag.includes('[ERROR]')) {
+                    span.style.color = 'red';
+                }
+                // Append the span element and the rest of the message to the log box
+                var logBox = document.querySelector('#logs');
+                logBox.appendChild(span);
+                logBox.appendChild(document.createTextNode(message + '\n'));
+                // Scroll to the bottom of the log box
+                logs.scrollTop = logs.scrollHeight;
+            }
+            // Color each line in the initial text
+            var initialText = document.querySelector('#logs').textContent.trim().split('\n');
+            document.querySelector('#logs').textContent = '';
+            for (var i = 0; i < initialText.length; i++) {
+                colorLogMessage(initialText[i]);
+            }
+            // Listen for a message from the server
+            socket.on('log update', colorLogMessage);
+            document.querySelector('#check-updates').addEventListener('click', function() {
+            fetch('/admin/check-updates')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.hasUpdates) {
+                        document.querySelector('#apply-updates').disabled = false;
+                    }
+                });
+            });
+
+            document.querySelector('#apply-updates').addEventListener('click', function() {
+                fetch('/admin/apply-updates')
+                    .then(() => {
+                        document.querySelector('#apply-updates').disabled = true;
+                    });
+            });
+        </script>
+    <% } %>
+</body>
+</html>
