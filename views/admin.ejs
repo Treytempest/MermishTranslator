@@ -12,161 +12,411 @@
             padding-right: 5px;
             padding-left: 5px;
         }
+        .form-label {
+            margin-bottom: 0.2rem;
+        }
+        .form-control {
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
-    <% if (showLoginForm) { %>
-        <!-- Render the login form -->
-        <div class="d-flex justify-content-center">
-            <div class="text-center">
-                <h1>Admin Login</h1>
+    <div class="d-flex justify-content-center" style="height: 50vh;">
+        <div class="text-center">
+            <h1>Admin Portal</h1>
+            <p>Welcome, <%= user.username %></p>
+        </div>
+    </div>
+    <div class="logout-button">
+        <button id="logout" class="btn btn-danger">Logout</button>
+    </div>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-3 d-flex flex-column align-items-end py-2 custom-col">
+                <button id="shutdown-server" class="btn btn-primary mb-2">Shutdown</button>
+                <button id="manage-users" class="btn btn-primary mb-2">Manage Users</button>
+                <button id="check-updates" class="btn btn-primary mb-2">Check for updates</button>
+            </div>
+            <div class="col-md-3 d-flex flex-column align-items-start py-2 custom-col">
+                <button id="restart-server" class="btn btn-primary mb-2">Restart</button>
+                <button id="clear-logs" class="btn btn-primary mb-2">Clear Logs</button>
+                <button id="rebuild-dictionaries" class="btn btn-primary mb-2">Rebuild dictionaries</button>
             </div>
         </div>
-        <div class="d-flex justify-content-center align-items-center" style="height: 80vh;">
-            <div>
-                <% if (error) { %>
-                    <p class="text-danger"><%= error %></p>
-                <% } %>
-                <form method="post" action="/admin">
-                    <div class="form-group row">
-                        <label for="username" class="col-sm-3 col-form-label">Username:</label>
-                        <div class="col-sm-9">
-                            <input type="text" class="form-control" id="username" name="username" placeholder="Enter your username" required>
-                        </div>
+    </div>
+    <!-- Render the log box -->
+    <div class="mt-5">
+        <div class="d-flex justify-content-center">
+            <h2>Server Logs</h2>
+        </div>
+        <div style="background-color: #f8f9fa; border: 1px solid #ced4da; padding: 15px; overflow: auto; max-height: 200px;">
+            <pre id="logs"><%= logs %></pre>
+        </div>
+    </div>
+    <!-- Confirm Modal -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" role="dialog" aria-labelledby="confirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">Confirm</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                </div>
+                <div id="confirmModalError" class="alert alert-danger" style="display: none;">
+                    <label id="confirmModalErrorText"> <!-- Error message will be set here --> </label>
+                </div>
+                <form id="confirmForm"></form>
+                    <div id="confirmModalBody" class="modal-body">
+                        <!-- Body content will be set here -->
                     </div>
-                    <div class="form-group row">
-                        <label for="password" class="col-sm-3 col-form-label">Password:</label>
-                        <div class="col-sm-9">
-                            <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
-                        </div>
-                    </div>
-                    <div class="form-group row">
-                        <div class="col-sm-9 offset-sm-3">
-                            <button type="submit" class="btn btn-primary">Log in</button>
-                        </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="confirmButton">Confirm</button>
                     </div>
                 </form>
             </div>
         </div>
-    <% } else { %>
-        <!-- Render the admin page -->
-        <div class="d-flex justify-content-center" style="height: 50vh;">
-            <div class="text-center">
-                <h1>Admin Portal</h1>
-                <p>Welcome, <%= user.username %></p>
+    </div>
+    <!-- Manage Users Modal -->
+    <div class="modal fade" id="manageUsersModal" tabindex="-1" role="dialog" aria-labelledby="manageUsersModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="manageUsersModalLabel">Manage Users</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <% admins.forEach(function(admin, index) { %>
+                    <div class="user d-flex justify-content-between mb-3">
+                        <span><%= admin.username %></span>
+                        <div>
+                            <!-- Make sure the primary user can't be deleted and can only have their password changed by themself -->
+                            <% if (index !== 0 && user.username !== admin.username) { %>
+                                <button class="btn btn-danger delete-user">Delete</button>
+                            <% } %>
+                            <% if (index !== 0 || (index === 0 && user.username === admin.username)) { %>
+                                <button class="btn btn-primary change-password">Change Password</button>
+                            <% } %>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="addUserButton">Add New User</button>
+            </div>
             </div>
         </div>
-        <div class="logout-button">
-            <button id="logout" class="btn btn-danger">Logout</button>
-        </div>
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-md-3 d-flex flex-column align-items-end py-2 custom-col">
-                    <button id="shutdown-server" class="btn btn-primary mb-2">Shutdown</button>
-                    <button id="manage-users" class="btn btn-primary mb-2">Manage Users</button>
-                    <button id="check-updates" class="btn btn-primary mb-2">Check for updates</button>
-                </div>
-                <div class="col-md-3 d-flex flex-column align-items-start py-2 custom-col">
-                    <button id="restart-server" class="btn btn-primary mb-2">Restart</button>
-                    <button id="clear-logs" class="btn btn-primary mb-2">Clear Logs</button>
-                    <button id="rebuild-dictionaries" class="btn btn-primary mb-2">Rebuild dictionaries</button>
-                </div>
-            </div>
-        </div>
-        <!-- Render the log box -->
-        <div class="mt-5">
-            <div class="d-flex justify-content-center">
-                <h2>Server Logs</h2>
-            </div>
-            <div style="background-color: #f8f9fa; border: 1px solid #ced4da; padding: 15px; overflow: auto; max-height: 200px;">
-                <pre id="logs"><%= logs %></pre>
-            </div>
-        </div>
-        <script src="/socket.io/socket.io.js"></script>
-        <script>
-            // #region Log box code
-            // Function to color a log message and add it to the log box
-            function addLogMessage(data) {
-                // Split the log message into the log level tag and the rest of the message
-                var tag = data.substring(0, data.indexOf(']') + 1);
-                var message = data.substring(data.indexOf(']') + 1);
-                // Create a new span element for the log level tag
-                var span = document.createElement('span');
-                span.textContent = tag;
-                // Set the color of the span element based on the log level
-                if (tag.includes('[INFO]')) {
-                    span.style.color = '#259C25';
-                } else if (tag.includes('[WARN]')) {
-                    span.style.color = '#FFA500';
-                } else if (tag.includes('[ERROR]')) {
-                    span.style.color = 'red';
-                }
-                // Append the span element and the rest of the message to the log box
-                var logBox = document.querySelector('#logs');
-                logBox.appendChild(span);
-                logBox.appendChild(document.createTextNode(message + '\n'));
-                // Scroll to the bottom of the log box
-                logBox.parentElement.scrollTop = logBox.parentElement.scrollHeight;
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        var currentUser= "<%= user.username %>";
+        // #region Log box code
+        // Function to color a log message and add it to the log box
+        function addLogMessage(data) {
+            // Split the log message into the log level tag and the rest of the message
+            var tag = data.substring(0, data.indexOf(']') + 1);
+            var message = data.substring(data.indexOf(']') + 1);
+            // Create a new span element for the log level tag
+            var span = document.createElement('span');
+            span.textContent = tag;
+            // Set the color of the span element based on the log level
+            if (tag.includes('[INFO]')) {
+                span.style.color = '#259C25';
+            } else if (tag.includes('[WARN]')) {
+                span.style.color = '#FFA500';
+            } else if (tag.includes('[ERROR]')) {
+                span.style.color = 'red';
             }
-            // Initial setup for the log box
-            var socket = io();
-            // Color each line in the initial text and add it to the log box
-            var initialText = document.querySelector('#logs').textContent.trim().split('\n');
-            document.querySelector('#logs').textContent = '';
-            for (var i = 0; i < initialText.length; i++) {
-                addLogMessage(initialText[i]);
-            }
+            // Append the span element and the rest of the message to the log box
+            var logBox = document.querySelector('#logs');
+            logBox.appendChild(span);
+            logBox.appendChild(document.createTextNode(message + '\n'));
             // Scroll to the bottom of the log box
-            document.querySelector('#logs').parentElement.scrollTop = document.querySelector('#logs').parentElement.scrollHeight;
-            // Listen for a message from the server, then append it to the log box
-            socket.on('log update', addLogMessage);
-            // #endregion
+            logBox.parentElement.scrollTop = logBox.parentElement.scrollHeight;
+        }
+        // Initial setup for the log box
+        var socket = io();
+        // Color each line in the initial text and add it to the log box
+        var initialText = document.querySelector('#logs').textContent.trim().split('\n');
+        document.querySelector('#logs').textContent = '';
+        for (var i = 0; i < initialText.length; i++) {
+            addLogMessage(initialText[i]);
+        }
+        // Scroll to the bottom of the log box
+        document.querySelector('#logs').parentElement.scrollTop = document.querySelector('#logs').parentElement.scrollHeight;
+        // Listen for a message from the server, then append it to the log box
+        socket.on('log update', addLogMessage);
+        // #endregion
 
-            // #region Button click event listeners
-            document.querySelector('#logout').addEventListener('click', function() {
-                fetch('/admin/logout', { method: 'POST' })
-                .then(() => {
-                    window.location.href = '/admin';
-                });
+        // #region Button click event listeners
+        document.querySelector('#logout').addEventListener('click', function() {
+            fetch('/admin/logout', { method: 'POST' })
+            .then(() => {
+                window.location.href = '/admin';
             });
-            document.querySelector('#check-updates').addEventListener('click', function() {
-                fetch('/admin/check-updates', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.hasUpdates) {
-                        if (confirm('Updates are available. Do you want to apply them? This will restart the server.')) {
-                            fetch('/admin/apply-updates', { method: 'POST' });
+        });
+        document.querySelector('#check-updates').addEventListener('click', function() {
+            fetch('/admin/check-updates', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.hasUpdates) {
+                    actionData = {
+                        action: 'run-updates',
+                        title: 'Apply Updates',
+                        bodyHtml: '<p>Updates are available. Would you like to apply them now?</p>'
+                    };
+                    $('#confirmModal').modal('show');
+                }
+            });
+        });
+        document.querySelector('#shutdown-server').addEventListener('click', function() {
+            actionData = {
+            action: 'shutdown-server',
+            title: 'Shutdown Server',
+            bodyHtml: '<p>Are you sure you want to shutdown the server?</p>'
+            };
+            $('#confirmModal').modal('show');
+        });
+        document.querySelector('#restart-server').addEventListener('click', function() {
+            actionData = {
+            action: 'restart-server',
+            title: 'Restart Server',
+            bodyHtml: '<p>Are you sure you want to restart the server?</p>'
+            };
+            $('#confirmModal').modal('show');
+        });
+        document.querySelector('#manage-users').addEventListener('click', function() {
+            $('#manageUsersModal').modal('show');
+        });
+        document.querySelector('#clear-logs').addEventListener('click', function() {
+            actionData = {
+            action: 'clear-logs',
+            title: 'Clear Logs',
+            bodyHtml: '<p>Are you sure you want to clear the logs?</p>'
+            };
+            $('#confirmModal').modal('show');
+        });
+        document.querySelector('#rebuild-dictionaries').addEventListener('click', function() {
+            fetch('/admin/rebuild-dictionaries', { method: 'POST' });
+        });
+        // #endregion
+
+        // #region Confirm Modal
+        $(document).on('submit', '.confirmForm', function(e) {
+            e.preventDefault();
+            document.querySelector('#confirmButton').click();
+        });
+        var actionData;
+        var isManagingUsers = false;
+        $('#confirmModal').on('show.bs.modal', function() {
+            if ($('#manageUsersModal').hasClass('show')) {
+                $('#manageUsersModal').removeClass('fade').on('hidden.bs.modal', function () {
+                    $(this).addClass('fade');
+                });
+                $('#confirmModal').removeClass('fade').on('hidden.bs.modal', function () {
+                    $(this).addClass('fade');
+                });
+                $('#manageUsersModal').modal('hide');
+                isManagingUsers = true;
+            }
+        });
+
+        $('#confirmModal').on('hidden.bs.modal', function() {
+            if (isManagingUsers) {
+                $('#manageUsersModal').removeClass('fade').on('shown.bs.modal', function () {
+                    $(this).addClass('fade');
+                });
+                $('#manageUsersModal').modal('show');
+                isManagingUsers = false;
+            }
+            $('#confirmModalError').hide();
+        });
+        $('#confirmModal').on('show.bs.modal', function(event) {
+            // Set up the modal based on the button that was clicked
+            var action = actionData.action;
+            var title = actionData.title;
+            var bodyHtml = actionData.bodyHtml;
+            $('#confirmModalLabel').text(title);
+            $('#confirmModalBody').html(bodyHtml);
+            // Actions to take when the confirm button is clicked
+            $('#confirmButton').off('click').on('click', function() {
+                switch (action) {
+                    case 'run-updates':
+                        fetch('/admin/apply-updates', { method: 'POST' });
+                        $('#confirmModal').modal('hide');
+                        break;
+                    case 'shutdown-server':
+                        fetch('/admin/shutdown', { method: 'POST' });
+                        $('#confirmModal').modal('hide');
+                        break;
+                    case 'restart-server':
+                        fetch('/admin/restart', { method: 'POST' });
+                        $('#confirmModal').modal('hide');
+                        break;
+                    case 'clear-logs':
+                        document.querySelector('#logs').textContent = '';
+                        fetch('/admin/clear-logs', { method: 'POST' });
+                        $('#confirmModal').modal('hide');
+                        break;
+                    case 'change-password':
+                        var username = actionData.user;
+                        var newPassword = document.querySelector('#newPassword').value;
+                        var confirmPassword = document.querySelector('#confirmPassword').value;
+                        if (newPassword === confirmPassword && newPassword !== '' && confirmPassword !== '') {
+                            fetch('/admin/update-password', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ username: username, password: newPassword })
+                            });
+                            $('#confirmModal').modal('hide');
+                        } else {
+                            if (newPassword === '' || confirmPassword === '') {
+                                $('#confirmModalErrorText').text('All fields are required.');
+                            } else {
+                                $('#confirmModalErrorText').text('Passwords do not match.');
+                                $('#newPassword, #confirmPassword').val('');
+                            }
+                            $('#confirmModalError').show();
                         }
-                    } else {
-                        alert('No updates available.');
-                    }
-                });
-            });
-            document.querySelector('#shutdown-server').addEventListener('click', function() {
-                if (confirm('Are you sure you want to shut down the server?')) {
-                    fetch('/admin/shutdown', { method: 'POST' });
+                        break;
+                    case 'delete-user':
+                        var username = actionData.user;
+                        fetch('/admin/remove-admin', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username: username })
+                        })
+                        .then(response => response.json())
+                        .then(data => { 
+                            updateAdminList(data.admins); 
+                            $('#confirmModal').modal('hide');
+                        });
+                        break;
+                    case 'add-user':
+                        var username = document.querySelector('#newUsername').value;
+                        var newPassword = document.querySelector('#newPassword').value;
+                        var confirmPassword = document.querySelector('#confirmPassword').value;
+                        if (newPassword === confirmPassword && username !== '' && newPassword !== '' && confirmPassword !== '') {
+                            fetch('/admin/add-admin', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ username: username, password: newPassword })
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    // If the server responds with a status code of 400, extract the error message
+                                    return response.json().then(data => Promise.reject(data.error));
+                                }
+                                return response.json();
+                            })
+                            .then(data => { 
+                                updateAdminList(data.admins); 
+                                $('#confirmModal').modal('hide');
+                            })
+                            .catch(error => {
+                                // Display the error message in confirmModalErrorText
+                                $('#confirmModalErrorText').text(error);
+                                $('#confirmModalError').show();
+                            });
+                        } else {
+                            if (newPassword !== confirmPassword) {
+                                $('#confirmModalErrorText').text('Passwords do not match.');
+                                $('#confirmModalError').show();
+                                $('#newPassword, #confirmPassword').val('');
+                            } else {
+                                $('#confirmModalErrorText').text('All fields are required.');
+                                $('#confirmModalError').show();
+                            }
+                        }
+                        break;
                 }
             });
-            document.querySelector('#restart-server').addEventListener('click', function() {
-                if (confirm('Are you sure you want to restart the server?')) {
-                    fetch('/admin/restart', { method: 'POST' });
-                }
-            });
-            document.querySelector('#manage-users').addEventListener('click', function() {
-                window.location.href = '/admin/users';
-            });
-            document.querySelector('#clear-logs').addEventListener('click', function() {
-                if (confirm('Are you sure you want to clear the logs?')) {
-                    document.querySelector('#logs').textContent = '';
-                    fetch('/admin/clear-logs', { method: 'POST' });
-                }
-            });
-            document.querySelector('#rebuild-dictionaries').addEventListener('click', function() {
-                fetch('/admin/rebuild-dictionaries', { method: 'POST' });
-            });
-            // #endregion
+        });
+        // #endregion
 
-        </script>
-    <% } %>
+        // #region Manage Users Modal
+        $(document).on('click', '.change-password', function() {
+            var username = $(this).closest('.user').find('span').text();
+            actionData = {
+            action: 'change-password',
+            user: username,
+            title: 'Change Password',
+            bodyHtml: `
+                <form id="changePasswordForm" class="confirmForm">
+                    <p class="form-label">Changing password for: ${username}</p>
+                    <input type="text" id="username" autocomplete="username" value="${username}" hidden>
+                    <p class="form-label">Enter password:</p>
+                    <input type="password" id="newPassword" class="form-control" autocomplete="new-password" required>
+                    <p class="form-label">Confirm password:</p>
+                    <input type="password" id="confirmPassword" class="form-control" autocomplete="new-password" required>
+                    <button type="submit" style="display: none;"></button>
+                </form>`
+            };
+            $('#confirmModal').modal('show');
+        });
+
+        $(document).on('click', '.delete-user', function() {
+            var username = $(this).closest('.user').find('span').text();
+            actionData = {
+            action: 'delete-user',
+            user: username,
+            title: 'Delete User',
+            bodyHtml: `<p>Are you sure you want to delete the user: ${username}?</p>`
+            };
+            $('#confirmModal').modal('show');
+        });
+
+        $('#addUserButton').click(function() {
+            actionData = {
+            action: 'add-user',
+            title: 'Add New User',
+            bodyHtml: `
+                <form id="addUserForm" class="confirmForm">
+                    <p class="form-label">Enter username:</p>
+                    <input type="text" id="newUsername" class="form-control" autocomplete="username" required>
+                    <p class="form-label">Enter password:</p>
+                    <input type="password" id="newPassword" class="form-control" autocomplete="new-password" required>
+                    <p class="form-label">Confirm password:</p>
+                    <input type="password" id="confirmPassword" class="form-control" autocomplete="new-password" required>
+                    <button type="submit" style="display: none;"></button>
+                </form>`
+            };
+            $('#confirmModal').modal('show');
+        });
+
+        function updateAdminList(admins) {
+            // Clear the current list
+            $('.modal-body').empty();
+            // Add each admin to the list
+            admins.forEach((admin, index) => {
+                var userDiv = $('<div>').addClass('user d-flex justify-content-between mb-3');
+                var usernameSpan = $('<span>').text(admin.username);
+                userDiv.append(usernameSpan);
+
+                var buttonDiv = $('<div>');
+
+                if (index !== 0 && currentUser !== admin.username) {
+                    var deleteUserButton = $('<button>').addClass('btn btn-danger delete-user').text('Delete');
+                    buttonDiv.append(deleteUserButton);
+                }
+
+                if (index !== 0 || (index === 0 && currentUser === admin.username)) {
+                    var changePasswordButton = $('<button>').addClass('btn btn-primary change-password ml-2').text('Change Password');
+                    buttonDiv.append(changePasswordButton);
+                }
+
+                userDiv.append(buttonDiv);
+                $('.modal-body').append(userDiv);
+            });
+        }
+        
+        // #endregion
+    </script>
 </body>
 </html>

@@ -90,7 +90,7 @@ export async function applyUpdates(): Promise<void> {
         await transpileTypeScript();
         await restartApp();
     } catch (error) {
-        console.error("Error applying updates: ", error);
+        console.error("Error applying updates: "+ error);
     }
 }
 // #endregion
@@ -100,11 +100,19 @@ export async function applyUpdates(): Promise<void> {
 export function restartApp(): Promise<void> {
     return new Promise((resolve, reject) => {
         console.log("Restarting app...");
-        exec('pm2 restart app', (error) => {
+        exec('where pm2', (error) => {
             if (error) {
-                reject(error);
-            } else {
+                console.error("pm2 is not installed. Unable to restart automatically.");
                 resolve();
+            } else {
+                exec('pm2 restart app', (error) => {
+                    if (error) {
+                        console.error("Error restarting app: "+ error);
+                        reject(error);
+                    } else {
+                        resolve();
+                    }
+                });
             }
         });
     });
@@ -113,9 +121,16 @@ export function restartApp(): Promise<void> {
 // Function to shut down the app
 export function shutDownApp(): void {
     console.log("Shutting down app...");
-    exec('pm2 stop app', (error) => {
+    exec('where pm2', (error) => {
         if (error) {
-            console.error("Error shutting down app: ", error);
+            process.exit();
+        } else { 
+            exec('pm2 stop app', (error) => {
+                if (error) {
+                    console.error("Error shutting down app: "+ error);
+                }
+                
+            });
         }
     });
 }
@@ -128,7 +143,7 @@ export function createLogPath(logsDir: string): string {
     if (!fs.existsSync(logsDir)) {
         fs.mkdirSync(logsDir);
     }
-    return path.join(logsDir, `server-${timestamp}.log`);
+    return path.resolve(logsDir, `server-${timestamp}.log`);
 }
 
 export function clearLogs(log_directory: string): void {
@@ -138,7 +153,7 @@ export function clearLogs(log_directory: string): void {
             return;
         }
         for (const file of files) {
-            fs.unlink(path.join(log_directory, file), err => {
+            fs.unlink(path.resolve(log_directory, file), err => {
                 if (err) {
                     console.error(err);
                 }
@@ -146,26 +161,46 @@ export function clearLogs(log_directory: string): void {
         }
     });
 }
-// #endregion
 
-// #region User management functions
-function addAdmin() {
-    const username: string = process.argv[2];
-    const password: string = process.argv[3];
-    bcrypt.hash(password, 10, (err: Error, hash: string) => {
-        if (err) {
-            console.error(err);
-            return;
-        }
-        const admins = [
-            {
-                username: username,
-                password: hash
+export function getDuplicates() {
+    // Retrieve the sheet data
+    getSheetData().then((rows) => {
+        const duplicates: { [key: string]: { keys: string[], lines: number[] } } = {};
+        const seen: { [key: string]: boolean } = {};
+
+        // Iterate through each row of the sheet data
+        rows.forEach((row, index) => {
+            const value = row[3].toLowerCase(); // Convert value to lowercase for case-insensitive comparison
+            const key = row[0];
+
+            if (value && key) {
+                // Check if the value has been seen before
+                if (seen[value]) {
+                    // If it has been seen, add the key and line number to the duplicates object
+                    duplicates[value].keys.push(key);
+                    duplicates[value].lines.push(index + 1);
+                } else {
+                    // If it hasn't been seen, mark it as seen and initialize the duplicates object for that value
+                    seen[value] = true;
+                    duplicates[value] = { keys: [key], lines: [index + 1] };
+                }
             }
-        ];
-        let adminFile = path.join(__dirname, '..', 'admins.json');
-        fs.writeFileSync(adminFile, JSON.stringify(admins, null, 2));
+        });
+
+        // Filter out duplicates with only one occurrence and format the output
+        const output = Object.entries(duplicates)
+            .filter(([value, { keys }]) => keys.length > 1)
+            .map(([value, { keys, lines }]) => `${value}: ${keys.join(', ')} (Lines: ${lines.join(', ')})`)
+            .join('\n');
+
+        // Write the output to a file
+        fs.writeFile('test files/output.txt', output, (err) => {
+            if (err) {
+                console.error('Error writing to file:', err);
+            } else {
+                console.log('Output written to file successfully.');
+            }
+        });
     });
-    console.log(`Admin ${username} added.`);
 }
-//#endregion
+// #endregion

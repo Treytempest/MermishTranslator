@@ -16,47 +16,51 @@ import { v4 as uuidv4 } from 'uuid';
 // Import required modules
 require('dotenv').config({ path: './secrets.env' });
 
-// Create a write stream for the log file
-const logsDir = path.join(__dirname, '..', 'logs');
-var log_file = adminFunctions.createLogPath(logsDir);
-var log_writer = fs.createWriteStream(log_file, {flags : 'w'});
+const root_path = process.env.NODE_ENV ? __dirname: process.cwd();
 
 // Create Express app, HTTP server, and Socket.IO server
-const app = express();
+export const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer);
 
 // Create Express session middleware
 const expressSession = session({ secret: process.env.SECRET_KEY, resave: true, saveUninitialized: true });
 
-// Override console.log to write logs to file and emit to Socket.IO clients
-let log_stdout = process.stdout;
-console.log = function(d) {
-  let timestamp = new Date().toLocaleString();
-  let message = `[INFO] ${timestamp} - ${util.format(d)}`;
-  log_writer.write(message + '\n');
-  log_stdout.write(message + '\n');
-  io.emit('log update', message);
-};
-
-// Override console.warn to write logs to file and emit to Socket.IO clients
-console.warn = function(d) {
+const logsDir = path.resolve(root_path, 'logs');
+var log_file = '';
+if (process.env.NODE_ENV !== 'test') {
+    // Create a write stream for the log file
+    log_file = adminFunctions.createLogPath(logsDir);
+    var log_writer = fs.createWriteStream(log_file, {flags : 'w'});
+    // Override console.log to write logs to file and emit to Socket.IO clients
+    let log_stdout = process.stdout;
+    console.log = function(d) {
     let timestamp = new Date().toLocaleString();
-    let message = `[WARN] ${timestamp} - ${util.format(d)}`;
+    let message = `[INFO] ${timestamp} - ${util.format(d)}`;
     log_writer.write(message + '\n');
     log_stdout.write(message + '\n');
     io.emit('log update', message);
-};
+    };
 
-// Override console.error to write logs to file and emit to Socket.IO clients
-let log_stderr = process.stderr;
-console.error = function(d) {
-  let timestamp = new Date().toLocaleString();
-  let message = `[ERROR] ${timestamp} - ${util.format(d)}`;
-  log_writer.write(message + '\n');
-  log_stderr.write(message + '\n');
-  io.emit('log update', message);
-};
+    // Override console.warn to write logs to file and emit to Socket.IO clients
+    console.warn = function(d) {
+        let timestamp = new Date().toLocaleString();
+        let message = `[WARN] ${timestamp} - ${util.format(d)}`;
+        log_writer.write(message + '\n');
+        log_stdout.write(message + '\n');
+        io.emit('log update', message);
+    };
+
+    // Override console.error to write logs to file and emit to Socket.IO clients
+    let log_stderr = process.stderr;
+    console.error = function(d) {
+    let timestamp = new Date().toLocaleString();
+    let message = `[ERROR] ${timestamp} - ${util.format(d)}`;
+    log_writer.write(message + '\n');
+    log_stderr.write(message + '\n');
+    io.emit('log update', message);
+    };
+}
 
 // Global error handler
 process.on('uncaughtException', function(err) {
@@ -70,12 +74,12 @@ process.on('exit', function(code) {
 });
 
 // Define the translation object
-var translator = new Translator();
+const translator = new Translator();
 
 // Configure Express app
 app.set('trust proxy', true);
 app.set('view engine', 'ejs'); // Set the view engine to ejs
-app.set('views', path.join(__dirname, '..', 'views')); // Set the views directory
+app.set('views', path.resolve(root_path, 'views')); // Set the views directory
 
 // Middleware to parse request bodies
 io.use(sharedsession(expressSession, { autoSave: true }));
@@ -84,13 +88,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(expressSession);
 // #endregion
 
-// #region Translator Page routes
-app.get('/', function (req, res) {
-    // Render the 'translator' view
-    res.render('translator', { englishText: '', angloText: '', mermishText: '' });
-});
+// #region Translator Page
 
-app.post('/', function (req, res, next) {
+// Exporting the translate function for testing
+export const translate = (req, res, next) => {
     const lastUpdated = req.body.lastUpdated;
     let englishText = req.body.englishText;
     let angloText = req.body.angloText;
@@ -132,48 +133,64 @@ app.post('/', function (req, res, next) {
                              `English Text: '${englishText}'\nAnglo Text: '${angloText}'\nMermish Text: '${mermishText}'\n` +
                              `Translation triggered by: ${lastUpdated}`));
     }
-    
+}
+
+// Load the translator page on root requests
+app.get('/', function (req, res) {
+    // Render the 'translator' view
+    res.render('translator', { englishText: '', angloText: '', mermishText: '' });
 });
+
+// Run the translation on post requests
+app.post('/', translate);
 // #endregion
 
-// #region Admin Portal routes
-app.get('/admin', function (req, res, err) {
+// #region Admin Portal
+app.get('/admin', function (req, res, next) {
+    var logs = '';
     if (req.session.admin) {
         // If the user is logged in, render the admin features
-        fs.readFile(log_file, 'utf8', function(err, data) {
-            if (err) {
-              console.error(err);
-              res.status(500).send('An error occurred while reading the log file.');
-            } else {
-                res.render('admin', { showLoginForm: false, user: req.session.admin, logs: data });
-            }
+        try {
+            const data = fs.readFileSync(log_file, 'utf8');
+            logs = data;
+        } catch (err) {
+            console.error(err);
+            logs = 'Error reading logs. Check that the file exists.';
+        }
+        const adminData = JSON.parse(fs.readFileSync(path.resolve(root_path, 'admins.json'), 'utf8'));
+        const admins = adminData.map(function(admin) {
+            return { username: admin.username };
         });
+        res.render('admin', { user: req.session.admin, logs: logs, admins: admins });
     } else {
-        // If the user is not logged in, render the login form within the admin page
-        res.render('admin', { showLoginForm: true, error: err.message });
+        // If the user is not logged in, render the login form
+        res.render('admin_login', { error: req.session.error });
     }
 });
+
+app.get('/admin_login', function (req, res) { res.redirect('/admin'); });
 
 app.post('/admin', async function (req, res) {
     const username = req.body.username;
     const password = req.body.password;
 
     // Read the JSON file
-    const admins = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'admins.json'), 'utf8'));
+    const admins = JSON.parse(fs.readFileSync(path.resolve(root_path, 'admins.json'), 'utf8'));
 
     // Check if the entered username exists in the JSON file
-    const admin = admins.find(admin => admin.username === username);
+    const admin = admins.find(admin => admin.username.toLowerCase() === username.toLowerCase());
 
     if (admin && await bcrypt.compare(password, admin.password)) {
         // If a match is found, set a session variable and reload the admin page
         console.log(`Admin ${admin.username} logged in from ${req.ip}`);
         req.session.admin = admin;
+        req.session.error = null; // Clear any previous error
         res.redirect('/admin');
     } else {
         // If no match is found, reload the admin page with the login form and an error message
-        // Pass an error variable set to 'Invalid credentials.'
         console.warn(`Failed login attempt from ${req.ip}`);
-        res.render('admin', { showLoginForm: true, error: 'Invalid credentials' });
+        req.session.error = 'Invalid credentials'; // Store the error message in the session
+        res.redirect('/admin_login');
     }
 });
 
@@ -185,6 +202,7 @@ app.get('/admin/*', (req, res, next) => {
     }
 });
 
+// #region Admin Functions
 app.post('/admin/check-updates', async (req, res, next) => {
     if (req.session.admin) {
         const hasUpdates = await adminFunctions.checkForUpdates();
@@ -209,7 +227,7 @@ app.post('/admin/logout', (req: Request, res: Response, next) => {
             res.redirect('/admin');
         });
     } else {
-        res.redirect('/admin', { showLoginForm: true, error: 'Please log in to log out.' });
+        res.redirect('/admin_login', { error: 'Please log in to log out.' });
     }
 });
 
@@ -229,10 +247,12 @@ app.post('/admin/restart', async (req, res, next) => {
 
 app.post('/admin/clear-logs', (req, res, next) => {
     if (req.session.admin) {
-        log_writer.end();
-        adminFunctions.clearLogs(logsDir);
-        log_file = adminFunctions.createLogPath(logsDir);
-        log_writer = fs.createWriteStream(log_file, {flags : 'w'});
+        if (process.env.NODE_ENV !== 'test') {
+            log_writer.end();
+            adminFunctions.clearLogs(logsDir);
+            log_file = adminFunctions.createLogPath(logsDir);
+            log_writer = fs.createWriteStream(log_file, {flags : 'w'});
+        }
         console.log('Logs cleared.');
     } else { next(createError(403,'Forbidden')); }
 });
@@ -242,8 +262,72 @@ app.post('/admin/rebuild-dictionaries', async (req, res, next) => {
         await translator.initializeDictionaries();
         res.sendStatus(200);
     } else { next(createError(403,'Forbidden')); }
-
 });
+
+app.post('/admin/add-admin', (req, res, next) => {
+    if (req.session.admin) {
+        const username = req.body.username;
+        const password = req.body.password;
+        const adminData = JSON.parse(fs.readFileSync(path.resolve(root_path, 'admins.json'), 'utf8'));
+        // Check if a user with the same username already exists
+        if (adminData.some(admin => admin.username.toLowerCase() === username.toLowerCase())) {
+            return res.status(400).json({ error: 'A user with this username already exists' });
+        }
+        const hashedPassword = bcrypt.hashSync(password, 10);
+        adminData.push({ username: username, password: hashedPassword });
+        fs.writeFileSync(path.resolve(root_path, 'admins.json'), JSON.stringify(adminData));
+        console.log(`Admin ${username} added by ${req.session.admin.username}`);
+        const newData = JSON.parse(fs.readFileSync(path.resolve(root_path, 'admins.json'), 'utf8'));
+        const admins = newData.map(function(admin) {
+            return { username: admin.username };
+        });
+        res.json({ admins });
+    } else { next(createError(403,'Forbidden')); }
+});
+
+app.post('/admin/remove-admin', (req, res, next) => {
+    if (req.session.admin) {
+        if (req.session.admin.username === req.body.username) {
+            return next(createError(400,'Cannot remove the currently logged in admin.'));
+        }
+        const username = req.body.username;
+        const adminData = JSON.parse(fs.readFileSync(path.resolve(root_path, 'admins.json'), 'utf8'));
+        if (adminData[0].username === username) {
+            return next(createError(401,'Cannot remove the initial admin.'));
+        }
+        const updatedAdminData = adminData.filter(admin => admin.username !== username);
+        fs.writeFileSync(path.resolve(root_path, 'admins.json'), JSON.stringify(updatedAdminData));
+        console.log(`Admin ${username} removed by ${req.session.admin.username}`);
+        const newData = JSON.parse(fs.readFileSync(path.resolve(root_path, 'admins.json'), 'utf8'));
+        const admins = newData.map(function(admin) {
+            return { username: admin.username };
+        });
+        res.json({ admins });
+    } else { next(createError(403,'Forbidden')); }
+});
+
+app.post('/admin/update-password', (req, res, next) => {
+    if (req.session.admin) {
+        const username = req.body.username;
+        const password = req.body.password;
+        const hashedPassword = bcrypt.hashSync(password, 10);
+        const adminData = JSON.parse(fs.readFileSync(path.resolve(root_path, 'admins.json'), 'utf8'));
+        if (adminData[0].username === username && req.session.admin.username !== username) {
+            return next(createError(401,'Only the initial admin can modify their password.'));
+        }
+        const updatedAdminData = adminData.map(admin => {
+            if (admin.username === username) {
+                return { username: username, password: hashedPassword };
+            }
+            return admin;
+        });
+        fs.writeFileSync(path.resolve(root_path, 'admins.json'), JSON.stringify(updatedAdminData));
+        console.log(`Password for admin ${username} updated by ${req.session.admin.username}`);
+        res.sendStatus(200);
+    } else { next(createError(403,'Forbidden')); }
+});
+// #endregion
+
 // #endregion
 
 // Catch-all route handler
