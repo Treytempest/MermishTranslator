@@ -82,7 +82,21 @@ async function getData(auth) {
 }
 
 export async function getSheetData() {
-  const auth = await authorize();
-  const data = await getData(auth);
+  var data = null;
+  try {
+    const auth = await authorize();
+    data = await getData(auth);
+    const backupPath = path.resolve(process.cwd(), 'data_backup.json');
+    await fs.writeFile(backupPath, JSON.stringify(data));
+  }
+  catch {
+    try {
+      const backupPath = path.resolve(process.cwd(), 'data_backup.json');
+      const content = await fs.readFile(backupPath);
+      data = JSON.parse(content);
+    } catch (err) {
+      console.log('No data backup found.');
+    }
+  }
   return data;
 }
